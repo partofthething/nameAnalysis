@@ -2,8 +2,14 @@
 Scans text for first names and prints out most common ones as document goes on
 
 Useful for analyzing journals or whatever.
+
 """
 
+# controls
+NUM_FILE_SEGMENTS = 25
+NUM_TOP_NAMES = 8
+
+# consts
 FEMALE = 0
 MALE = 1
 EITHER = 2
@@ -11,6 +17,9 @@ EITHER = 2
 def read_names(filename):
     """
     read potential first names from data library
+
+    Get names from, for example, http://www.outpost9.com/files/WordLists.html
+    See http://stackoverflow.com/questions/1803628/raw-list-of-person-names for other options.
     """
     names = []
     with open(filename) as f:
@@ -23,7 +32,7 @@ def read_names(filename):
 
 def scan_for_names(data_file_name, names):
     """
-    look through file for names
+    look through text file for names
     """
     with open(data_file_name) as f:
         num_words = 0
@@ -42,7 +51,7 @@ def scan_for_names(data_file_name, names):
 
 def process(word):
     """
-    Mangles a word and gets rid of contractions so "John's" shows up as "john"
+    Mangle a word and gets rid of contractions so "John's" shows up as "john"
     """
     word = word.lower()
     if "'" in word and word not in ["don't", "haven't"]:
@@ -50,39 +59,45 @@ def process(word):
     return word
 
 def rank(name_results):
-    divisions = 25
-    show = 8
-
-    for names in grouper(name_results, divisions):
+    """
+    process the names found and print out the top few.
+    """
+    for names in chunk(name_results, NUM_FILE_SEGMENTS):
         names_here, _word_num_here = zip(*names)
         counts = []
         for name in uniquify(names_here):
             counts.append((names_here.count(name), name))
         counts.sort()
         counts.reverse()
-        print ''.join(['{0:10s}'.format(name) for _count, name in counts[:show]])
+        print ''.join(['{0:10s}'.format(name) for _count, name in counts[:NUM_TOP_NAMES]])
 
 
-def uniquify(seq):
-    # order preserving
-    checked = []
-    for e in seq:
-        if e not in checked:
-            checked.append(e)
-    return checked
-
-def grouper(iterable, n, fillvalue=(None, None)):
-    """break list into n chunks
-
+def uniquify(iterable):
     """
-    num = float(len(iterable)) / n
-    l = [ iterable [i:i + int(num)] for i in range(0, (n - 1) * int(num), int(num))]
-    l.append(iterable[(n - 1) * int(num):])
-    return l
+    Make unique list while preserving order.
+    """
+    unique = []
+    for entry in iterable:
+        if entry not in unique:
+            unique.append(entry)
+    return unique
+
+def chunk(iterable, num_chunks, fillvalue=(None, None)):
+    """break list into num_chunks chunks. Ugly.
+
+    Stolen from the web somewhere.
+    """
+    num = float(len(iterable)) / num_chunks
+    chunks = [iterable[i:i + int(num)] for i in range(0, (num_chunks - 1) * int(num), int(num))]
+    chunks.append(iterable[(num_chunks - 1) * int(num):])
+    return chunks
 
 def make_name_data(chicks, dudes):
     """
-    makes convenient data structure about names
+    make convenient data structure about names.
+
+    It separates out men and women in case future development wants to plot them in
+    different colors or something.
     """
     names = {}
     for name in chicks:
